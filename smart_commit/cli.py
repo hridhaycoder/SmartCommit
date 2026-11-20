@@ -35,7 +35,7 @@ Git Diff:
 {diff}"""
 
     payload = {
-        "model": "gemma4:e4b",
+        "model": "qwen2.5-coder:3b",
         "prompt": prompt,
         "stream":False
     }
@@ -55,6 +55,6 @@ if not diff:
 commit_message = generate_commit_message(diff)
 
 print("\n Suggested Commit Message:")
-print("-"*40)
+print("="*60)
 print(commit_message)
-print("-" * 40)
+print("=" * 60)
