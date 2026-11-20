@@ -1,1 +1,7 @@
-.env
+# Python build and cache files
+__pycache__/
+*.py[cod]
+dist/
+build/
+*.egg-info/
+.DS_Store
