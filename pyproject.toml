@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "git-smart-commit"
+version = "0.1.0"
+description = "AI-powered Git commit message generator using local Ollama models"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+git-smart-commit = "smart_commit.cli:main"

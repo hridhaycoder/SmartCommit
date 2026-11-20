@@ -3,6 +3,16 @@ import urllib.request
 import sys
 import subprocess
 
+class Colors:
+    BLUE = "\033[94m"
+    DARK_BLUE = "\033[34m"
+    WHITE = "\033[97m"
+    GRAY = "\033[90m"
+    BLACK_BG = "\033[40m"
+    BLUE_BG = "\033[44m"
+    BOLD = "\033[1m" 
+    RESET = "\033[0m"
+
 def get_staged_diff():
     result = subprocess.run(
         ["git","diff","--cached"],
