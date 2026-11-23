@@ -35,7 +35,7 @@ Git Diff:
 {diff}"""
 
     payload = {
-        "model": "qwen2.5-coder:3b",
+        "model": "gemma4:e4b",
         "prompt": prompt,
         "stream":False
     }
@@ -47,14 +47,103 @@ Git Diff:
         result = json.loads(response.read().decode("utf-8"))
         return result["response"].strip()
 
-diff = get_staged_diff()
+def regenerate_with_feedback(diff,old_message, feedback):
+    url = "http://localhost:11434/api/generate"
 
-if not diff:
-    print("X No staged changes found! Run 'git add <file> first.")
+    prompt = f"""Here is a git diff and a previous commit message suggestion. The user wants to change it based on feedback
 
-commit_message = generate_commit_message(diff)
+Git Diff:
+{diff}
 
-print("\n Suggested Commit Message:")
-print("="*60)
-print(commit_message)
-print("=" * 60)
+Previous Message:
+{old_message}
+
+User Feedback:
+{feedback}
+
+Rules:
+- Rewrite the COnventional Commit message baed on the user's feedback.
+- Output ONLY the raw commit message text. No markdown blocks, quotes, or conversational filler.
+
+"""
+    payload = {
+        "model": "gemma4:e4b",
+        "prompt": prompt,
+        "stream":False
+    }
+
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url,data=data, headers={"Content-Type": "application/json"})
+
+    with urllib.request.urlopen(req) as response:
+        result = json.loads(response.read().decode("utf-8"))
+        return result["response"].strip()
+
+def render_chat_box(message):
+    lines = message.strip().split("\n")
+    width = max(max(len(line) for line in lines) + 4,52)
+
+    top_border = f"{Colors.DARK_BLUE} {'-' * width} {Colors.RESET}"
+    bottom_border = f"{Colors.DARK_BLUE}{'-'*width}{Colors.RESET}"
+
+    print(f"\n{top_border}")
+    print(f"{Colors.DARK_BLUE}│{Colors.RESET} {Colors.BLUE_BG}{Colors.WHITE}{Colors.BOLD} GEMMA 4 E4B {Colors.RESET}{' ' * (width - 14)}{Colors.DARK_BLUE}│{Colors.RESET}")
+    print(f"{Colors.DARK_BLUE}|{' '*width}|{Colors.RESET}")
+
+    for line in lines:
+        padding = width - len(line) - 2
+        print(f"{Colors.DARK_BLUE}|{Colors.RESET} {Colors.WHITE}{Colors.BOLD}{line}{Colors.RESET}{' '*padding}{Colors.DARK_BLUE}|{Colors.RESET}")
+
+    print(f"{Colors.DARK_BLUE}|{' '*width}|{Colors.RESET}")
+    print(f"{bottom_border}\n")
+
+def interactive_commit_loop(diff,initial_message):
+    current_message = initial_message
+
+    while True:
+        render_chat_box(current_message)
+
+        print(
+            f"  {Colors.BLUE}[y]{Colors.WHITE} Commit   "
+            f"{Colors.BLUE}[e]{Colors.WHITE} Edit   "
+            f"{Colors.BLUE}[q]{Colors.WHITE} Quit   "
+            f"{Colors.GRAY}(or type below to chat & refine){Colors.RESET}\n"
+        )
+
+        user_input = input(f"{Colors.BLUE}❯ {Colors.WHITE}").strip()
+        print(Colors.RESET, end="")
+
+        if user_input.lower() == "y":
+            subprocess.run(["git", "commit", "-m", current_message])
+            print(f"\n{Colors.BLUE}✔ {Colors.WHITE}{Colors.BOLD}Commited sucessfully.{Colors.RESET}\n")
+            break
+        elif user_input.lower() == "e":
+            subprocess.run(["git","commit","-m",current_message, "--edit"])
+            break
+        elif user_input.lower() == "q":
+            print(f"\n{Colors.GRAY}✖ Aborted.{Colors.RESET}\n")
+            sys.exit(1)
+        elif user_input == "":
+            continue
+        else:
+            print(f"\n{Colors.BLUE}●  {Colors.GRAY}Refining commit message...{Colors.RESET}")
+            current_message = regenerate_with_feedback(diff,current_message, user_input)
+
+def main():
+    diff = get_staged_diff()
+    if not diff:
+        print(f"\n{Colors.BLUE}✖ {Colors.WHITE}No staged changes found! Run 'git add <file>' first.{Colors.RESET}\n")
+        sys.exit(1)
+
+    print(f"\n{Colors.BLUE}● {Colors.GRAY}Gemma 4 E4B is analyzing your changes...{Colors.RESET}")
+    commit_message = generate_commit_message(diff)
+
+    if not commit_message:
+        print(f"\n{Colors.BLUE}✖ {Colors.WHITE}Failed to generate a commit message.{Colors.RESET}\n")
+        sys.exit(1)
+
+    interactive_commit_loop(diff,commit_message)
+
+if __name__ == "__main__":
+    main()
+
