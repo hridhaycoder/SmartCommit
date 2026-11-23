@@ -122,6 +122,7 @@ def interactive_commit_loop(diff,initial_message):
             f"  {Colors.BLUE}[y]{Colors.WHITE} Commit   "
             f"{Colors.BLUE}[e]{Colors.WHITE} Edit   "
             f"{Colors.BLUE}[q]{Colors.WHITE} Quit   "
+            f"{Colors.BLUE}[r]{Colors.WHITE} Regenerate   "
             f"{Colors.GRAY}(or type below to chat & refine){Colors.RESET}\n"
         )
 
@@ -138,6 +139,10 @@ def interactive_commit_loop(diff,initial_message):
         elif user_input.lower() == "q":
             print(f"\n{Colors.GRAY}x Aborted.{Colors.RESET}\n")
             sys.exit(1)
+        elif user_input.strip().lower() == "r":
+            print(f"{Colors.WHITE}{Colors.BOLD} Regenerating...{Colors.RESET}")
+            current_message = generate_commit_message(diff)
+
         elif user_input == "":
             continue
         else:
