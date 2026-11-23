@@ -15,6 +15,9 @@ class Colors:
     RESET = "\033[0m"
 
 def get_staged_diff():
+
+    subprocess.run({"git","add", "-A"}, capture_output=True)
+
     result = subprocess.run(
         ["git","diff","--cached"],
         capture_output=True,
@@ -29,8 +32,9 @@ def generate_commit_message(diff):
     prompt = f"""You are an expert software developer. Analyze the follow git diff and write a concise commit message (e.g., feat:,fix:, refactor:, docs:, chore:).
 
 Rules:
-- Keep the first line under 72 characters.
-- Output only the raw commit message test, do not give markdown code blocks, quotes, or anything conversational.
+- Output ONLY the single-line commit message. 
+- NO body paragraphs, NO explanations, NO markdown blocks, and NO quotes.
+- Keep it under 72 characters.
 
 Git Diff:
 {diff}"""
@@ -63,8 +67,8 @@ User Feedback:
 {feedback}
 
 Rules:
-- Rewrite the COnventional Commit message baed on the user's feedback.
-- Output ONLY the raw commit message text. No markdown blocks, quotes, or conversational filler.
+- Rewrite the Conventional Commit message baed on the user's feedback.
+- Output ONLY the single-line commit message. No body, no markdown blocks, quotes, or conversational filler.
 
 """
     payload = {
@@ -78,7 +82,8 @@ Rules:
 
     with urllib.request.urlopen(req) as response:
         result = json.loads(response.read().decode("utf-8"))
-        return result["response"].strip()
+        full_response = result["response"].strip()
+        return full_response.split("\n")[0].strip()
 
 def render_chat_box(message):
     max_content_width = 70
