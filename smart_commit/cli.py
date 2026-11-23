@@ -2,6 +2,7 @@ import json
 import urllib.request
 import sys
 import subprocess
+import textwrap
 
 class Colors:
     BLUE = "\033[94m"
@@ -80,9 +81,19 @@ Rules:
         return result["response"].strip()
 
 def render_chat_box(message):
-    lines = message.strip().split("\n")
-    width = max(max(len(line) for line in lines) + 4,52)
+    max_content_width = 70
 
+    raw_lines = message.strip().split("\n")
+    wrapped_lines = []
+    for line in raw_lines:
+        if not line.strip():
+            wrapped_lines.append("")
+        else:
+            wrapped_lines.extend(textwrap.wrap(line, width=max_content_width))
+
+        
+    width = max(max((len(line) for line in wrapped_lines),default=50), 50) + 4
+    
     top_border = f"{Colors.DARK_BLUE} {'-' * width} {Colors.RESET}"
     bottom_border = f"{Colors.DARK_BLUE}{'-'*width}{Colors.RESET}"
 
@@ -90,7 +101,7 @@ def render_chat_box(message):
     print(f"{Colors.DARK_BLUE}│{Colors.RESET} {Colors.BLUE_BG}{Colors.WHITE}{Colors.BOLD} GEMMA 4 E4B {Colors.RESET}{' ' * (width - 14)}{Colors.DARK_BLUE}│{Colors.RESET}")
     print(f"{Colors.DARK_BLUE}|{' '*width}|{Colors.RESET}")
 
-    for line in lines:
+    for line in wrapped_lines:
         padding = width - len(line) - 2
         print(f"{Colors.DARK_BLUE}|{Colors.RESET} {Colors.WHITE}{Colors.BOLD}{line}{Colors.RESET}{' '*padding}{Colors.DARK_BLUE}|{Colors.RESET}")
 
