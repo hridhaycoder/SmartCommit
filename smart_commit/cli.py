@@ -16,7 +16,7 @@ class Colors:
 
 def get_staged_diff():
 
-    subprocess.run({"git","add", "-A"}, capture_output=True)
+    subprocess.run(["git","add", "."], capture_output=True)
 
     result = subprocess.run(
         ["git","diff","--cached"],
@@ -144,7 +144,19 @@ def interactive_commit_loop(diff,initial_message):
             print(f"\n{Colors.BLUE}*  {Colors.GRAY}Refining commit message...{Colors.RESET}")
             current_message = regenerate_with_feedback(diff,current_message, user_input)
 
+def print_banner():
+    banner = f"""{Colors.BLUE}{Colors.BOLD}
+
+    ---- - -      ----                -      ----                     - -
+   / ___(_) |_  / ___| _ __ ___   __ _| |_   / ___|___  _ __ ___ _ __ (_) |_
+  | |  _| | __| \\___ \\| '_ ` _ \\ / _` | __| | |   / _ \\| '_` _ \\| '_ \\| | __|  
+  | |_| | | |_  ___) | | | | | | (_| | |_  | |__| (_) | | | | | | | |_  
+  \\____|_|\\__| |____/|_| |_| |_|\\__,_|\\__|   \\____\\___/|_| |_| |_|_| |_|_|\\__|
+{Colors.RESET}"""
+    print(banner)
+
 def main():
+    print_banner()
     diff = get_staged_diff()
     if not diff:
         print(f"\n{Colors.BLUE}x {Colors.WHITE}No staged changes found! Run 'git add <file>' first.{Colors.RESET}\n")
