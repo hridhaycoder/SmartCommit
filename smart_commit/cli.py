@@ -98,7 +98,6 @@ def render_chat_box(message):
     bottom_border = f"{Colors.DARK_BLUE}{'-'*width}{Colors.RESET}"
 
     print(f"\n{top_border}")
-    print(f"{Colors.DARK_BLUE}│{Colors.RESET} {Colors.BLUE_BG}{Colors.WHITE}{Colors.BOLD} GEMMA 4 E4B {Colors.RESET}{' ' * (width - 14)}{Colors.DARK_BLUE}│{Colors.RESET}")
     print(f"{Colors.DARK_BLUE}|{' '*width}|{Colors.RESET}")
 
     for line in wrapped_lines:
@@ -132,25 +131,25 @@ def interactive_commit_loop(diff,initial_message):
             subprocess.run(["git","commit","-m",current_message, "--edit"])
             break
         elif user_input.lower() == "q":
-            print(f"\n{Colors.GRAY}✖ Aborted.{Colors.RESET}\n")
+            print(f"\n{Colors.GRAY}x Aborted.{Colors.RESET}\n")
             sys.exit(1)
         elif user_input == "":
             continue
         else:
-            print(f"\n{Colors.BLUE}●  {Colors.GRAY}Refining commit message...{Colors.RESET}")
+            print(f"\n{Colors.BLUE}*  {Colors.GRAY}Refining commit message...{Colors.RESET}")
             current_message = regenerate_with_feedback(diff,current_message, user_input)
 
 def main():
     diff = get_staged_diff()
     if not diff:
-        print(f"\n{Colors.BLUE}✖ {Colors.WHITE}No staged changes found! Run 'git add <file>' first.{Colors.RESET}\n")
+        print(f"\n{Colors.BLUE}x {Colors.WHITE}No staged changes found! Run 'git add <file>' first.{Colors.RESET}\n")
         sys.exit(1)
 
-    print(f"\n{Colors.BLUE}● {Colors.GRAY}Gemma 4 E4B is analyzing your changes...{Colors.RESET}")
+    print(f"\n{Colors.BLUE}* {Colors.GRAY}Analyzing your changes...{Colors.RESET}")
     commit_message = generate_commit_message(diff)
 
     if not commit_message:
-        print(f"\n{Colors.BLUE}✖ {Colors.WHITE}Failed to generate a commit message.{Colors.RESET}\n")
+        print(f"\n{Colors.BLUE}x {Colors.WHITE}Failed to generate a commit message.{Colors.RESET}\n")
         sys.exit(1)
 
     interactive_commit_loop(diff,commit_message)
