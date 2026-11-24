@@ -172,7 +172,7 @@ def render_chat_box(message):
     width = max(max((len(line) for line in wrapped_lines),default=50), 50) + 4
     
     top_border = f"{Colors.DARK_BLUE} {'-' * width} {Colors.RESET}"
-    bottom_border = f"{Colors.DARK_BLUE}{'-'*width}{Colors.RESET}"
+    bottom_border = f" {Colors.DARK_BLUE}{'-'*width}{Colors.RESET}"
 
     print(f"\n{top_border}")
     print(f"{Colors.DARK_BLUE}|{' '*width}|{Colors.RESET}")
