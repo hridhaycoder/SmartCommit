@@ -4,6 +4,7 @@ import sys
 import subprocess
 import textwrap
 import os
+import shutil
 
 
 
@@ -226,14 +227,40 @@ def interactive_commit_loop(diff,initial_message,model):
             current_message = regenerate_with_feedback(diff,current_message, user_input)
 
 def print_banner():
-    art = """
+    full_banner = """
   ____ ___ _____    ____  __  __    _    ____  _____     ____ ___  __  __ __  __ ___ _____ 
  / ___|_ _|_   _|  / ___||  \\/  |  / \\  |  _ \\|_   _|   / ___/ _ \\|  \\/  |  \\/  |_ _|_   _|
 | |  _ | |  | |   | (___ | |\\/| | / _ \\ | |_)|  | |    | |  | | | | |\\/| | |\\/| || |  | |  
 | |_| || |  | |    \\___ \\| |  | |/ ___ \\|  _ \\  | |    | |__| |_| | |  | | |  | || |  | |  
  \\____|___| |_|   |_____/|_|  |_/_/   \\_\\_| \\_\\ |_|     \\____\\___/|_|  |_|_|  |_|___| |_|  
 """
-    print(f"{Colors.BLUE}{Colors.BOLD}{art}{Colors.RESET}{Colors.GRAY}{Colors.RESET}")
+
+    split_banner = """
+  ____ ___ _____ 
+ / ___|_ _|_   _|
+| |  _ | |  | |  
+| |_| || |  | |  
+ \\____|___| |_| 
+
+  ____  __  __    _    ____  _____     ____ ___  __  __ __  __ ___ _____ 
+ / ___||  \\/  |  / \\  |  _ \\|_   _|   / ___/ _ \\|  \\/  |  \\/  |_ _|_   _|
+| (___ | |\\/| | / _ \\ | |_)|  | |    | |  | | | | |\\/| | |\\/| || |  | |  
+ \\___ \\| |  | |/ ___ \\|  _ \\  | |    | |__| |_| | |  | | |  | || |  | |  
+|_____/|_|  |_/_/   \\_\\_| \\_\\ |_|     \\____\\___/|_|  |_|_|  |_|___| |_|  
+
+"""
+    
+
+    term_width = shutil.get_terminal_size().columns
+
+    if term_width>=95:
+        print(f"{Colors.BLUE}{Colors.BOLD}{full_banner}{Colors.RESET}{Colors.GRAY}{Colors.RESET}")
+    elif term_width > 55:
+        print(f"{Colors.BLUE}{Colors.BOLD}{split_banner}{Colors.RESET}{Colors.GRAY}{Colors.RESET}")
+    else:
+        print("\nGit\nSmart Commit\n" + "─" * min(term_width, 25))
+
+
 
 def main():
     print_banner()
