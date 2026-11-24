@@ -38,23 +38,41 @@ def get_staged_diff():
     )
     return result.stdout.strip()
 
+MAX_MODEL_SIZES_BYTES = 10 *1024**3
 
-def get_installed_ollama_models():
+def get_installed_ollama_models(max_size_bytes=MAX_MODEL_SIZES_BYTES):
     try:
         req = urllib.request.Request("http://localhost:11434/api/tags")
         with urllib.request.urlopen(req, timeout=2) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-            return [m["name"] for m in data.get("models",[])]
+            local_models = []
+            for m in data.get("models",[]):
+                size = m.get("size",0)
+                name = m.get("name","")
+                if (0 < size <= max_size_bytes) and ("cloud" not in name.lower()):
+                    local_models.append(name)
+            return local_models
     except Exception:
         return []
 
-def select_model(force_prompt=False):
-    if not force_prompt and os.path.exists(CONFIG_PATH):
-        with open(CONFIG_PATH,"r") as f:
-            config = json.load(f)
-            if "model" in config:
-                return config["model"]
+DEFAULT_MODEL = "gemma4:e4b"
 
+def get_or_set_default_model():
+    if os.path.exists(CONFIG_PATH):
+        try:
+            with open(CONFIG_PATH,"r") as f:
+                config = json.load(f)
+                if "model" in config:
+                    return config["model"]
+        except Exception:
+            pass
+
+    default_config = {"model": DEFAULT_MODEL}
+    with open(CONFIG_PATH, "w") as f:
+        json.dump(default_config, f, indent=2)
+    return DEFAULT_MODEL
+
+def select_model():
     installed = get_installed_ollama_models()
     choices = installed if installed else RECOMMENDED_MODELS
 
@@ -159,7 +177,7 @@ def render_chat_box(message):
     print(f"{Colors.DARK_BLUE}|{' '*width}|{Colors.RESET}")
 
     for line in wrapped_lines:
-        padding = width - len(line) - 2
+        padding = width - len(line) - 1
         print(f"{Colors.DARK_BLUE}|{Colors.RESET} {Colors.WHITE}{Colors.BOLD}{line}{Colors.RESET}{' '*padding}{Colors.DARK_BLUE}|{Colors.RESET}")
 
     print(f"{Colors.DARK_BLUE}|{' '*width}|{Colors.RESET}")
@@ -176,6 +194,7 @@ def interactive_commit_loop(diff,initial_message,model):
             f"{Colors.BLUE}[e]{Colors.WHITE} Edit   "
             f"{Colors.BLUE}[q]{Colors.WHITE} Quit   "
             f"{Colors.BLUE}[r]{Colors.WHITE} Regenerate   "
+            f"{Colors.BLUE}[m]{Colors.WHITE} Change Model   "
             f"{Colors.GRAY}(or type below to chat & refine){Colors.RESET}\n"
         )
 
@@ -196,9 +215,10 @@ def interactive_commit_loop(diff,initial_message,model):
             print(f"{Colors.WHITE}{Colors.BOLD} Regenerating...{Colors.RESET}")
             current_message = generate_commit_message(diff,model)
         elif user_input.strip().lower() == "m":
-            model = select_model(force_prompt=True)
-            print(f"\n{Colors.BLUE}* {Colors.GRAY}Regenerating with {model}...{Colors.RESET}")
+            model = select_model()
+            print(f"\n{Colors.BLUE}* {Colors.GRAY}Default model updated to {model} Regenerating...{Colors.RESET}")
             current_message = generate_commit_message(diff,model)
+
         elif user_input == "":
             continue
         else:
@@ -217,7 +237,7 @@ def print_banner():
 
 def main():
     print_banner()
-    model = select_model()
+    model = get_or_set_default_model()
 
     diff = get_staged_diff()
     if not diff:
@@ -225,7 +245,7 @@ def main():
         sys.exit(1)
 
     print(f"\n{Colors.BLUE}* {Colors.GRAY}Analyzing your changes...{Colors.RESET}")
-    commit_message = generate_commit_message(diff,"gemma4:e4b")
+    commit_message = generate_commit_message(diff,model)
 
     if not commit_message:
         print(f"\n{Colors.BLUE}x {Colors.WHITE}Failed to generate a commit message.{Colors.RESET}\n")
