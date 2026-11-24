@@ -4,6 +4,3 @@ This is a smart commiter using small AI models to help me figure out an easy way
 
 Current Model:
 
-qwen 2.5 coder 4b
-
-![alt text](<Screenshot 2026-11-20 at 3.26.51 PM.png>)
