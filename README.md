@@ -1,6 +1,24 @@
 # SmartCommit
 
-This is a smart commiter using small AI models to help me figure out an easy way to make commits descriptive. This is especially useful for public projects where people need descriptive and concise commits to approve merges and pr's. Later once I finish working on this I want to publish this as a python project for people to use so others can just download to with pip, starting from version 3.10. I also want to make it have more colors and be more interactive so it can be like claude code with more interactive features and more things to do. That pretty much it, it uses subprocess and all that for the git commits and all.
+A lightweight CLI tool that writes Conventional Commit messages for you using your local Ollama models. No API keys, no cloud tracking, and zero external Python dependencies.
 
-Current Model:
+## Why?
+Writing good commit messages gets tedious, and paying for API tokens just to summarize a `git diff` feels unnecessary when local models run fast enough on your own machine. This runs completely offline using standard Python and whatever models you already have in Ollama.
 
+## What it does
+- Stages your changes (`git add .`) and reads the diff.
+- Generates a clean, single-line Conventional Commit message (`feat:`, `fix:`, `refactor:`, etc.).
+- Opens an interactive prompt so you can:
+  - **`y`** — commit right away
+  - **`e`** — edit the message in your default editor before committing
+  - **`r`** — regenerate a new suggestion
+  - **`m`** — switch to a different local Ollama model
+  - **Type anything else** — tell the model how to tweak the message (e.g., *"make it shorter"* or *"mention the config fix"*)
+- Optionally pushes to your remote branch right after committing.
+
+## Setup
+
+You'll need **Python 3.8+** and **[Ollama](https://ollama.com)** running locally with at least one model pulled (defaults to `gemma4:e4b`):
+
+```bash
+ollama pull gemma4:e4b
