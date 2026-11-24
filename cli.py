@@ -5,6 +5,8 @@ import subprocess
 import textwrap
 import os
 import shutil
+from pathlib import Path
+import argparse
 
 
 
@@ -18,7 +20,8 @@ class Colors:
     BOLD = "\033[1m" 
     RESET = "\033[0m"
 
-CONFIG_PATH = os.path.expanduser("~/.smartcommitrc")
+CONFIG_PATH = Path.home() / ".smartcommitrc"
+DEFAULT_CONFIG = {"model": "gemma4:e4b", "auto_push": False}
 
 RECOMMENDED_MODELS = [
     "nemotron-3.5-bolt:e4b",
@@ -27,6 +30,18 @@ RECOMMENDED_MODELS = [
     "qwen2.5-coder:7b",
 ]
 
+def load_config():
+    if not CONFIG_PATH.exists():
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(DEFAULT_CONFIG, f, indent=2)
+        return DEFAULT_CONFIG.copy()
+    try:
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            return {**DEFAULT_CONFIG, **json.load(f)}
+    except (json.JSONDecodeError, OSError):
+        return DEFAULT_CONFIG.copy()
+
+config = load_config()
 
 def get_staged_diff():
 
@@ -38,6 +53,16 @@ def get_staged_diff():
         text=True
     )
     return result.stdout.strip()
+
+def push_changes():
+    print("Syncing changes to remote...")
+    result = subprocess.run(
+        ["git","push","-u","origin","HEAD"], capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        print("Synced to remote sucessfuly.")
+    else:
+        print(f"Push failed:\n{result.stderr.strip()}")
 
 MAX_MODEL_SIZES_BYTES = 10 *1024**3
 
@@ -184,7 +209,7 @@ def render_chat_box(message):
     print(f"{Colors.DARK_BLUE}|{' '*width}|{Colors.RESET}")
     print(f"{bottom_border}\n")
 
-def interactive_commit_loop(diff,initial_message,model):
+def interactive_commit_loop(diff, initial_message, model, args):
     current_message = initial_message
 
     while True:
@@ -205,16 +230,24 @@ def interactive_commit_loop(diff,initial_message,model):
         if user_input.lower() == "y":
             subprocess.run(["git", "commit", "-m", current_message])
             print(f"\n{Colors.BLUE}✔ {Colors.WHITE}{Colors.BOLD}Commited sucessfully.{Colors.RESET}\n")
+            if args.push or config.get("auto_push",False):
+                push_changes()
             break
+
         elif user_input.strip().lower() == "e":
             subprocess.run(["git","commit","-m",current_message, "--edit"])
+            if args.push or config.get("auto_push",False):
+                push_changes
             break
+
         elif user_input.strip().lower() == "q":
             print(f"\n{Colors.GRAY}x Aborted.{Colors.RESET}\n")
             sys.exit(1)
+
         elif user_input.strip().lower() == "r":
             print(f"{Colors.WHITE}{Colors.BOLD} Regenerating...{Colors.RESET}")
             current_message = generate_commit_message(diff,model)
+
         elif user_input.strip().lower() == "m":
             model = select_model()
             print(f"\n{Colors.BLUE}* {Colors.GRAY}Default model updated to {model} Regenerating...{Colors.RESET}")
@@ -263,6 +296,18 @@ def print_banner():
 
 
 def main():
+
+    parser = argparse.ArgumentParser(
+        description = "AI-driven Conventional Commits CLI"
+    )
+    parser.add_argument(
+        "-p",
+        "--push",
+        action="store_true",
+        help="Automatically push changes to remote after commiting"
+    )
+    args = parser.parse_args()
+
     print_banner()
     model = get_or_set_default_model()
 
@@ -278,7 +323,7 @@ def main():
         print(f"\n{Colors.BLUE}x {Colors.WHITE}Failed to generate a commit message.{Colors.RESET}\n")
         sys.exit(1)
 
-    interactive_commit_loop(diff,commit_message,model)
+    interactive_commit_loop(diff,commit_message,model,args)
 
 if __name__ == "__main__":
     main()
