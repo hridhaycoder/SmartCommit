@@ -3,6 +3,9 @@ import urllib.request
 import sys
 import subprocess
 import textwrap
+import os
+
+
 
 class Colors:
     BLUE = "\033[94m"
@@ -13,6 +16,16 @@ class Colors:
     BLUE_BG = "\033[44m"
     BOLD = "\033[1m" 
     RESET = "\033[0m"
+
+CONFIG_PATH = os.path.expanduser("~/.smartcommitrc")
+
+RECOMMENDED_MODELS = [
+    "nemotron-3.5-bolt:e4b",
+    "gemma4:e4b",
+    "ornith-1.5:9b",
+    "qwen2.5-coder:7b",
+]
+
 
 def get_staged_diff():
 
@@ -25,7 +38,47 @@ def get_staged_diff():
     )
     return result.stdout.strip()
 
-def generate_commit_message(diff):
+
+def get_installed_ollama_models():
+    try:
+        req = urllib.request.Request("http://localhost:11434/api/tags")
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return [m["name"] for m in data.get("models",[])]
+    except Exception:
+        return []
+
+def select_model(force_prompt=False):
+    if not force_prompt and os.path.exists(CONFIG_PATH):
+        with open(CONFIG_PATH,"r") as f:
+            config = json.load(f)
+            if "model" in config:
+                return config["model"]
+
+    installed = get_installed_ollama_models()
+    choices = installed if installed else RECOMMENDED_MODELS
+
+    print(f"\n{Colors.BLUE}{Colors.BOLD}Select an Ollama model:{Colors.RESET}")
+    for idx,name in enumerate(choices, start=1):
+        status = f"{Colors.GRAY}(installed){Colors.RESET}" if name in installed else ""
+        print(f"  [{idx}] {name} {status}")
+
+    while True:
+        raw = input(f"\n{Colors.BOLD}Enter choice [1-{len(choices)}] (default 1): {Colors.RESET}").strip()
+        if raw == "":
+            chosen = choices[0]
+            break
+        if raw.isdigit() and 1 <= int(raw) <= len(choices):
+            chosen = choices[int(raw) - 1]
+            break
+        print("Invalid selection try again.")
+
+    with open(CONFIG_PATH, "w") as f:
+        json.dump({"model": chosen}, f, indent=2)
+
+    return chosen
+
+def generate_commit_message(diff,model):
         
     url = "http://localhost:11434/api/generate"
 
@@ -40,7 +93,7 @@ Git Diff:
 {diff}"""
 
     payload = {
-        "model": "gemma4:e4b",
+        "model": model,
         "prompt": prompt,
         "stream":False
     }
@@ -112,7 +165,7 @@ def render_chat_box(message):
     print(f"{Colors.DARK_BLUE}|{' '*width}|{Colors.RESET}")
     print(f"{bottom_border}\n")
 
-def interactive_commit_loop(diff,initial_message):
+def interactive_commit_loop(diff,initial_message,model):
     current_message = initial_message
 
     while True:
@@ -133,16 +186,19 @@ def interactive_commit_loop(diff,initial_message):
             subprocess.run(["git", "commit", "-m", current_message])
             print(f"\n{Colors.BLUE}✔ {Colors.WHITE}{Colors.BOLD}Commited sucessfully.{Colors.RESET}\n")
             break
-        elif user_input.lower() == "e":
+        elif user_input.strip().lower() == "e":
             subprocess.run(["git","commit","-m",current_message, "--edit"])
             break
-        elif user_input.lower() == "q":
+        elif user_input.strip().lower() == "q":
             print(f"\n{Colors.GRAY}x Aborted.{Colors.RESET}\n")
             sys.exit(1)
         elif user_input.strip().lower() == "r":
             print(f"{Colors.WHITE}{Colors.BOLD} Regenerating...{Colors.RESET}")
-            current_message = generate_commit_message(diff)
-
+            current_message = generate_commit_message(diff,model)
+        elif user_input.strip().lower() == "m":
+            model = select_model(force_prompt=True)
+            print(f"\n{Colors.BLUE}* {Colors.GRAY}Regenerating with {model}...{Colors.RESET}")
+            current_message = generate_commit_message(diff,model)
         elif user_input == "":
             continue
         else:
@@ -161,19 +217,21 @@ def print_banner():
 
 def main():
     print_banner()
+    model = select_model()
+
     diff = get_staged_diff()
     if not diff:
-        print(f"\n{Colors.BLUE}x {Colors.WHITE}No staged changes found! Run 'git add <file>' first.{Colors.RESET}\n")
+        print(f"\n{Colors.BLUE}x {Colors.WHITE}No staged changes found! Run 'git add <file>' or 'git add .' first.{Colors.RESET}\n")
         sys.exit(1)
 
     print(f"\n{Colors.BLUE}* {Colors.GRAY}Analyzing your changes...{Colors.RESET}")
-    commit_message = generate_commit_message(diff)
+    commit_message = generate_commit_message(diff,"gemma4:e4b")
 
     if not commit_message:
         print(f"\n{Colors.BLUE}x {Colors.WHITE}Failed to generate a commit message.{Colors.RESET}\n")
         sys.exit(1)
 
-    interactive_commit_loop(diff,commit_message)
+    interactive_commit_loop(diff,commit_message,model)
 
 if __name__ == "__main__":
     main()
